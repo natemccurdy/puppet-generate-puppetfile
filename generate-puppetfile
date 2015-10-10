@@ -1,9 +1,30 @@
-#!/bin/sh
-MODULEPATH=`mktemp -d`
-LIST=`mktemp`
-for module in $*
+#!/bin/bash
+
+if ! which puppet 2>/dev/null 1>&2; then
+  echo "$0 requires that you have Puppet installed"
+  exit 1
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: $0 <author>-<modulename>"
+  exit 1
+fi
+
+MODULEPATH="$(mktemp -d XXXXX)"
+if ! [[ -d $MODULEPATH ]]; then
+  echo "Error: Unable to make a temp directory to store the module"
+  exit 1
+fi
+
+LIST="$(mktemp XXXXX)"
+if ! [[ -f $LIST ]]; then
+  echo "Error: Unable to make a temp file for the module list"
+  exit 1
+fi
+
+for module in "$@"
 do
-  echo "Download $module and its dependencies..."
+  echo "Downloading $module and its dependencies..."
   puppet module install $module --modulepath=$MODULEPATH > /dev/null
 done
 
@@ -25,5 +46,8 @@ echo "----------------------------------"
 echo ""
 cat $LIST
 
-rm $LIST $LIST.bak
-rm -fR $MODULEPATH
+cleanup () {
+  rm -fr $LIST ${LIST}.bak $MODULEPATH
+}
+trap cleanup EXIT
+
