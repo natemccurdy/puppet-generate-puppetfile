@@ -10,6 +10,11 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
+cleanup () {
+  rm -fr $LIST ${LIST}.bak $MODULEPATH
+}
+trap cleanup EXIT
+
 MODULEPATH="$(mktemp -d XXXXX)"
 if ! [[ -d $MODULEPATH ]]; then
   echo "Error: Unable to make a temp directory to store the module"
@@ -26,6 +31,11 @@ for module in "$@"
 do
   echo "Downloading $module and its dependencies..."
   puppet module install $module --modulepath=$MODULEPATH > /dev/null
+  ret_val=$?
+  if [[ $ret_val -ne 0 ]]; then
+    echo "Failed to download $module"
+    exit 1
+  fi
 done
 
 echo "Module download complete. Generating Puppetfile."
@@ -45,9 +55,4 @@ echo "Here is your suggested Puppetfile:"
 echo "----------------------------------"
 echo ""
 cat $LIST
-
-cleanup () {
-  rm -fr $LIST ${LIST}.bak $MODULEPATH
-}
-trap cleanup EXIT
 
